@@ -1,36 +1,21 @@
-@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-@theme {
-  --color-brand-50: #fdf4f3;
-  --color-brand-100: #fce8e6;
-  --color-brand-200: #f9d4d0;
-  --color-brand-300: #f4b3ac;
-  --color-brand-400: #eb877d;
-  --color-brand-500: #de5f52;
-  --color-brand-600: #cb4436;
-  --color-brand-700: #aa362a;
-  --color-brand-800: #8d3027;
-  --color-brand-900: #762d26;
-  --color-brand-950: #40140f;
-  --font-sans: "Inter", system-ui, sans-serif;
-  --font-display: "Cal Sans", "Inter", system-ui, sans-serif;
+:root {
+  --header-height: 72px;
+  --color-brand: #de5f52;
+  --color-brand-dark: #cb4436;
 }
 
 @layer base {
-  * {
-    @apply border-gray-200;
-  }
-  body {
-    @apply bg-white text-gray-900 antialiased;
-  }
+  * { @apply border-gray-200; }
+  body { @apply bg-white text-gray-900 antialiased; }
 }
 
 @layer components {
   .skeleton {
-    background: linear-gradient(90deg, #f3f4f6 25%, #f9fafb 50%, #f3f4f6 75%);
-    background-size: 200% 100%;
-    animation: shimmer 2s infinite linear;
-    border-radius: 0.5rem;
+    @apply bg-gradient-to-r from-gray-100 via-gray-50 to-gray-100 bg-[length:200%_100%] animate-shimmer rounded;
   }
 
   .container-shop {
