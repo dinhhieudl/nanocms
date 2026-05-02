@@ -2,7 +2,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { Section, SectionHeading } from '@/components/builder';
 import { Calendar, ArrowRight } from 'lucide-react';
-import mockData from '@/lib/supabase/mock-data.json';
+import mockData from '@/lib/supabase/mock-data';
 
 export const metadata = {
   title: 'Blog',

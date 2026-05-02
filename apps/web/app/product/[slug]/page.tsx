@@ -2,6 +2,7 @@ import { Suspense } from 'react';
 import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { ProductDetail } from '@/components/product/product-detail';
+import { ProductReviews } from '@/components/product/product-reviews';
 import { ProductCard } from '@/components/product/product-card';
 import { Section, SectionHeading } from '@/components/builder';
 import { generateProductMetadata, generateProductJsonLd } from '@/lib/seo';
@@ -60,6 +61,18 @@ export default async function ProductPage({ params }: Props) {
           product={product as Product}
           variants={(variants || []) as ProductVariant[]}
         />
+      </Section>
+
+      {/* Reviews */}
+      <Section>
+        <SectionHeading title="Customer Reviews" subtitle="What our customers say" />
+        <div className="max-w-3xl">
+          <ProductReviews
+            productId={product.id}
+            avgRating={(product as any).avg_rating}
+            reviewCount={(product as any).review_count}
+          />
+        </div>
       </Section>
 
       {related && related.length > 0 && (

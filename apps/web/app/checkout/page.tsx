@@ -4,15 +4,16 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
-import { CreditCard, Truck, MapPin, ShoppingBag, CheckCircle2, Loader2 } from 'lucide-react';
+import { CreditCard, Truck, MapPin, ShoppingBag, Loader2, AlertCircle } from 'lucide-react';
 import { useCart } from '@/hooks/use-cart';
 import { formatPrice } from '@/lib/utils';
 import { Section, SectionHeading } from '@/components/builder';
 
 export default function CheckoutPage() {
   const router = useRouter();
-  const { items, clearCart } = useCart();
+  const { items, couponCode, discount, clearCart } = useCart();
   const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('cod');
   const [form, setForm] = useState({
     fullName: '',
@@ -27,24 +28,89 @@ export default function CheckoutPage() {
 
   const subtotal = items.reduce((sum, i) => sum + i.price * i.quantity, 0);
   const shipping = subtotal >= 500000 ? 0 : 30000;
-  const total = subtotal + shipping;
+  const couponDiscount = couponCode ? discount : 0;
+  const total = subtotal - couponDiscount + shipping;
 
   const updateForm = (field: string, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));
+    if (error) setError('');
+  };
+
+  const validateForm = (): string | null => {
+    if (!form.fullName.trim()) return 'Please enter your full name';
+    if (!form.phone.trim()) return 'Please enter your phone number';
+    if (!form.address.trim()) return 'Please enter your address';
+    if (!form.ward.trim()) return 'Please enter your ward';
+    if (!form.district.trim()) return 'Please enter your district';
+    if (!form.city.trim()) return 'Please enter your city';
+    if (items.length === 0) return 'Your cart is empty';
+    return null;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const validationError = validateForm();
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
+
     setSubmitting(true);
+    setError('');
 
-    // Simulate order creation
-    await new Promise((r) => setTimeout(r, 1500));
+    try {
+      const shippingAddress = {
+        full_name: form.fullName,
+        phone: form.phone,
+        email: form.email,
+        address: form.address,
+        ward: form.ward,
+        district: form.district,
+        city: form.city,
+        country: 'Vietnam',
+      };
 
-    const orderNumber = `#NC-${String(Math.floor(Math.random() * 99999)).padStart(5, '0')}`;
+      const orderItems = items.map((item) => ({
+        product_id: item.productId,
+        variant_id: item.variantId || null,
+        name: item.name,
+        sku: item.attributes
+          ? Object.values(item.attributes).join('-')
+          : undefined,
+        qty: item.quantity,
+        unit_price: item.price,
+        total: item.price * item.quantity,
+      }));
 
-    // Clear cart and redirect
-    clearCart();
-    router.push(`/checkout/success?order=${orderNumber}`);
+      const res = await fetch('/api/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          items: orderItems,
+          shipping_address: shippingAddress,
+          billing_address: shippingAddress,
+          payment_method: paymentMethod,
+          coupon_code: couponCode || null,
+          subtotal,
+          discount_total: couponDiscount,
+          shipping_total: shipping,
+          tax_total: 0,
+          total,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to place order');
+      }
+
+      clearCart();
+      router.push(`/checkout/success?order=${data.order_number || ''}`);
+    } catch (err: any) {
+      setError(err.message || 'Something went wrong. Please try again.');
+      setSubmitting(false);
+    }
   };
 
   if (items.length === 0) {
@@ -67,6 +133,18 @@ export default function CheckoutPage() {
       <form onSubmit={handleSubmit} className="mt-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Shipping info */}
         <div className="lg:col-span-2 space-y-6">
+          {/* Error banner */}
+          {error && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex items-center gap-3 p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm"
+            >
+              <AlertCircle className="h-5 w-5 shrink-0" />
+              {error}
+            </motion.div>
+          )}
+
           {/* Contact */}
           <div className="card">
             <h2 className="flex items-center gap-2 text-lg font-bold mb-4">
@@ -246,6 +324,12 @@ export default function CheckoutPage() {
                 <span className="text-gray-500">Subtotal</span>
                 <span className="font-medium">{formatPrice(subtotal)}</span>
               </div>
+              {couponDiscount > 0 && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-green-600">Coupon ({couponCode})</span>
+                  <span className="text-green-600">-{formatPrice(couponDiscount)}</span>
+                </div>
+              )}
               <div className="flex justify-between text-sm">
                 <span className="text-gray-500">Shipping</span>
                 <span className="font-medium">{shipping === 0 ? <span className="text-green-600">Free</span> : formatPrice(shipping)}</span>

@@ -23,28 +23,24 @@ export default function CartPage() {
     if (!couponInput.trim()) return;
     setCouponError('');
 
-    // Mock coupon validation
-    const mockCoupons: Record<string, { type: string; value: number; minOrder: number }> = {
-      'WELCOME10': { type: 'percentage', value: 10, minOrder: 200000 },
-      'SALE50K': { type: 'fixed', value: 50000, minOrder: 500000 },
-    };
+    try {
+      const res = await fetch('/api/discount', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: couponInput, subtotal }),
+      });
+      const data = await res.json();
 
-    const coupon = mockCoupons[couponInput.toUpperCase()];
-    if (!coupon) {
-      setCouponError('Invalid coupon code');
-      return;
+      if (!data.valid) {
+        setCouponError(data.error || 'Invalid coupon');
+        return;
+      }
+
+      applyCoupon(data.code || couponInput.toUpperCase(), data.discount);
+      setCouponInput('');
+    } catch {
+      setCouponError('Failed to validate coupon. Please try again.');
     }
-    if (subtotal < coupon.minOrder) {
-      setCouponError(`Minimum order: ${formatPrice(coupon.minOrder)}`);
-      return;
-    }
-
-    const discountAmount = coupon.type === 'percentage'
-      ? Math.round(subtotal * coupon.value / 100)
-      : coupon.value;
-
-    applyCoupon(couponInput.toUpperCase(), discountAmount);
-    setCouponInput('');
   };
 
   if (items.length === 0) {

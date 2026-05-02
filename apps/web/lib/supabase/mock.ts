@@ -1,5 +1,5 @@
 // Mock Supabase client for local development without Supabase
-import mockData from './mock-data.json';
+import mockData from './mock-data';
 
 type QueryFilter = {
   column: string;
@@ -49,25 +49,46 @@ class MockQueryBuilder {
   range(from: number, to: number) { this.rangeFrom = from; this.rangeTo = to; return this; }
   single() { this.singleRow = true; return this; }
 
-  // Support insert/update/delete
   insert(data: any) {
+    const self = this;
     const table = this.table;
-    return {
+    const result = {
       select: () => ({
         single: async () => {
           const arr = (mockData as any)[table] || [];
-          const newItem = { ...data, id: data.id || `mock-${Date.now()}`, created_at: new Date().toISOString() };
+          const newItem = Array.isArray(data) ? data[0] : data;
+          if (!newItem.id) newItem.id = `mock-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+          if (!newItem.created_at) newItem.created_at = new Date().toISOString();
+          if (!newItem.updated_at) newItem.updated_at = new Date().toISOString();
           arr.push(newItem);
+          (mockData as any)[table] = arr;
           return { data: newItem, error: null };
         },
       }),
       single: async () => {
         const arr = (mockData as any)[table] || [];
-        const newItem = { ...data, id: data.id || `mock-${Date.now()}`, created_at: new Date().toISOString() };
+        const newItem = Array.isArray(data) ? data[0] : data;
+        if (!newItem.id) newItem.id = `mock-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+        if (!newItem.created_at) newItem.created_at = new Date().toISOString();
+        if (!newItem.updated_at) newItem.updated_at = new Date().toISOString();
         arr.push(newItem);
+        (mockData as any)[table] = arr;
         return { data: newItem, error: null };
       },
+      then: (resolve: any, reject: any) => {
+        const arr = (mockData as any)[table] || [];
+        const items = Array.isArray(data) ? data : [data];
+        for (const item of items) {
+          if (!item.id) item.id = `mock-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+          if (!item.created_at) item.created_at = new Date().toISOString();
+          if (!item.updated_at) item.updated_at = new Date().toISOString();
+          arr.push(item);
+        }
+        (mockData as any)[table] = arr;
+        return resolve({ data: items.length === 1 ? items[0] : items, error: null });
+      },
     };
+    return result;
   }
 
   update(data: any) {
@@ -75,8 +96,11 @@ class MockQueryBuilder {
       eq: async (column: string, value: any) => {
         const arr = (mockData as any)[this.table] || [];
         const idx = arr.findIndex((r: any) => r[column] === value);
-        if (idx >= 0) Object.assign(arr[idx], data);
-        return { data: idx >= 0 ? arr[idx] : null, error: idx >= 0 ? null : { message: 'Not found' } };
+        if (idx >= 0) {
+          Object.assign(arr[idx], data, { updated_at: new Date().toISOString() });
+          return { data: arr[idx], error: null };
+        }
+        return { data: null, error: { message: 'Not found' } };
       },
       match: async (filter: any) => {
         return { data: null, error: null };
@@ -95,7 +119,6 @@ class MockQueryBuilder {
     };
   }
 
-  // Make it a proper PromiseLike
   then<TResult1 = any, TResult2 = never>(
     onfulfilled?: ((value: any) => TResult1 | PromiseLike<TResult1>) | null,
     onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | null

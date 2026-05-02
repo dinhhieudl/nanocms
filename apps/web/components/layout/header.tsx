@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence, useScroll, useMotionValueEvent } from 'framer-motion';
 import { ShoppingBag, Search, Menu, X, User, ChevronDown } from 'lucide-react';
 import { useCart } from '@/hooks/use-cart';
@@ -42,11 +43,22 @@ export function Header({
   sticky = true,
   transparent = false,
 }: HeaderProps) {
+  const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const cartCount = useCart((s) => s.items.reduce((sum, i) => sum + i.quantity, 0));
   const { scrollY } = useScroll();
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      router.push(`/collections?search=${encodeURIComponent(searchQuery.trim())}`);
+      setSearchOpen(false);
+      setSearchQuery('');
+    }
+  };
 
   useMotionValueEvent(scrollY, 'change', (latest) => {
     setScrolled(latest > 10);
@@ -177,17 +189,19 @@ export function Header({
                 transition={{ duration: 0.2 }}
                 className="overflow-hidden border-t"
               >
-                <div className="py-4">
+                <form onSubmit={handleSearch} className="py-4">
                   <div className="relative">
                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
                     <input
                       type="text"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
                       placeholder="Search products…"
                       autoFocus
                       className="w-full rounded-full border-gray-200 bg-gray-50 pl-12 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:bg-white transition-all"
                     />
                   </div>
-                </div>
+                </form>
               </motion.div>
             )}
           </AnimatePresence>

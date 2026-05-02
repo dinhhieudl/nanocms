@@ -3,7 +3,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { Section } from '@/components/builder';
 import { Calendar, User, ArrowLeft } from 'lucide-react';
-import mockData from '@/lib/supabase/mock-data.json';
+import mockData from '@/lib/supabase/mock-data';
 
 interface Props {
   params: Promise<{ slug: string }>;
