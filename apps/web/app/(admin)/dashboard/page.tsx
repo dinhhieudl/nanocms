@@ -1,72 +1,101 @@
-import { createClient } from '@/lib/supabase/server';
-import { Section } from '@/components/builder';
-import { Package, ShoppingCart, DollarSign, Users } from 'lucide-react';
+import Link from 'next/link';
+import { Package, ShoppingCart, DollarSign, TrendingUp, ArrowUpRight, ArrowDownRight } from 'lucide-react';
+import mockData from '@/lib/supabase/mock-data.json';
 
-export default async function AdminDashboard() {
-  const supabase = await createClient();
+export const metadata = {
+  title: 'Admin Dashboard',
+};
 
-  const [{ count: productCount }, { count: orderCount }, { data: recentOrders }] = await Promise.all([
-    supabase.from('products').select('*', { count: 'exact', head: true }),
-    supabase.from('orders').select('*', { count: 'exact', head: true }),
-    supabase.from('orders').select('*').order('created_at', { ascending: false }).limit(5),
-  ]);
+export default function DashboardPage() {
+  const products = (mockData as any).products || [];
+  const orders = (mockData as any).orders || [];
+  const totalRevenue = orders.reduce((sum: number, o: any) => sum + (o.total || 0), 0);
 
   const stats = [
-    { label: 'Products', value: productCount || 0, icon: Package, color: 'bg-blue-500' },
-    { label: 'Orders', value: orderCount || 0, icon: ShoppingCart, color: 'bg-green-500' },
-    { label: 'Revenue', value: '₫0', icon: DollarSign, color: 'bg-amber-500' },
-    { label: 'Customers', value: 0, icon: Users, color: 'bg-purple-500' },
+    { label: 'Total Products', value: products.length, icon: Package, change: '+12%', up: true },
+    { label: 'Total Orders', value: orders.length, icon: ShoppingCart, change: '+8%', up: true },
+    { label: 'Revenue', value: `${(totalRevenue / 1000000).toFixed(1)}M₫`, icon: DollarSign, change: '+23%', up: true },
+    { label: 'Conversion', value: '3.2%', icon: TrendingUp, change: '-0.5%', up: false },
   ];
 
   return (
-    <div className="ml-64 p-8">
-      <h1 className="text-2xl font-bold mb-8">Dashboard</h1>
+    <div>
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <h1 className="text-2xl font-bold font-display">Dashboard</h1>
+          <p className="text-sm text-gray-500 mt-1">Welcome back! Here&apos;s your store overview.</p>
+        </div>
+        <select className="input-field w-auto text-sm">
+          <option>Last 7 days</option>
+          <option>Last 30 days</option>
+          <option>This month</option>
+        </select>
+      </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        {stats.map(({ label, value, icon: Icon, color }) => (
-          <div key={label} className="rounded-2xl border bg-white p-6 flex items-center gap-4">
-            <div className={`${color} p-3 rounded-xl text-white`}>
-              <Icon className="h-6 w-6" />
+        {stats.map(({ label, value, icon: Icon, change, up }) => (
+          <div key={label} className="card">
+            <div className="flex items-center justify-between mb-3">
+              <div className="w-10 h-10 rounded-xl bg-brand-100 flex items-center justify-center">
+                <Icon className="h-5 w-5 text-brand-600" />
+              </div>
+              <span className={`flex items-center gap-1 text-xs font-medium ${up ? 'text-green-600' : 'text-red-500'}`}>
+                {up ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
+                {change}
+              </span>
             </div>
-            <div>
-              <p className="text-sm text-gray-500">{label}</p>
-              <p className="text-2xl font-bold">{value}</p>
-            </div>
+            <p className="text-2xl font-bold">{value}</p>
+            <p className="text-xs text-gray-500 mt-1">{label}</p>
           </div>
         ))}
       </div>
 
-      <div className="rounded-2xl border bg-white p-6">
-        <h2 className="font-semibold mb-4">Recent Orders</h2>
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b text-left text-gray-500">
-              <th className="pb-3">Order</th>
-              <th className="pb-3">Status</th>
-              <th className="pb-3">Total</th>
-              <th className="pb-3">Date</th>
-            </tr>
-          </thead>
-          <tbody>
-            {(recentOrders || []).map((order: any) => (
-              <tr key={order.id} className="border-b last:border-0">
-                <td className="py-3 font-medium">{order.order_number}</td>
-                <td className="py-3">
-                  <span className="px-2 py-1 rounded-full text-xs font-medium bg-gray-100">
-                    {order.status}
-                  </span>
-                </td>
-                <td className="py-3">{order.total?.toLocaleString()}₫</td>
-                <td className="py-3 text-gray-400">
-                  {new Date(order.created_at).toLocaleDateString('vi-VN')}
-                </td>
+      <div className="card">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="font-bold">Recent Products</h2>
+          <Link href="/products" className="text-sm text-brand-600 hover:underline">View all</Link>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b text-left text-gray-500">
+                <th className="pb-3 font-medium">Product</th>
+                <th className="pb-3 font-medium">Category</th>
+                <th className="pb-3 font-medium">Price</th>
+                <th className="pb-3 font-medium">Stock</th>
+                <th className="pb-3 font-medium">Status</th>
               </tr>
-            ))}
-            {(!recentOrders || recentOrders.length === 0) && (
-              <tr><td colSpan={4} className="py-8 text-center text-gray-400">No orders yet</td></tr>
-            )}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {products.slice(0, 5).map((product: any) => (
+                <tr key={product.id} className="border-b last:border-0">
+                  <td className="py-3 font-medium">{product.name}</td>
+                  <td className="py-3 text-gray-500">{product.category_name}</td>
+                  <td className="py-3">
+                    {product.sale_price ? (
+                      <span>
+                        <span className="text-brand-600 font-medium">{product.sale_price.toLocaleString()}₫</span>
+                        <span className="text-gray-400 line-through ml-2">{product.price.toLocaleString()}₫</span>
+                      </span>
+                    ) : (
+                      <span>{product.price.toLocaleString()}₫</span>
+                    )}
+                  </td>
+                  <td className="py-3">
+                    <span className={product.stock < 20 ? 'text-orange-500' : 'text-gray-600'}>
+                      {product.stock}
+                    </span>
+                  </td>
+                  <td className="py-3">
+                    <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-green-100 text-green-700">
+                      Active
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );

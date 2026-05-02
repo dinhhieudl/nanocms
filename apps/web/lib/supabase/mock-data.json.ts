@@ -232,9 +232,16 @@ const siteOptions = [
   },
 ];
 
+// product_catalog mirrors products with computed fields (like the SQL view)
+const product_catalog = products.map((p) => ({
+  ...p,
+  effective_price: p.sale_price || p.price,
+}));
+
 const mockData = {
   categories,
   products,
+  product_catalog,
   product_variants: products.flatMap((p) => {
     const sizes = p.attributes.find((a: any) => a.name === 'Size')?.values || ['One Size'];
     const colors = p.attributes.find((a: any) => a.name === 'Color')?.values || ['Default'];
